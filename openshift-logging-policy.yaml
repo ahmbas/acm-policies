@@ -1,0 +1,71 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: openshift-logging-installed
+  namespace: default
+  annotations:
+    policy.open-cluster-management.io/categories: ""
+    policy.open-cluster-management.io/standards: ""
+    policy.open-cluster-management.io/controls: ""
+spec:
+  disabled: false
+  remediationAction: enforce
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: openshift-logging-installed
+        spec:
+          remediationAction: inform
+          severity: high
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                kind: Namespace
+                metadata:
+                  name: openshift-logging
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: operators.coreos.com/v1alpha1
+                kind: Subscription
+                metadata:
+                  name: cluster-logging
+                  namespace: openshift-logging
+                spec:
+                  channel: stable-6.0
+                  installPlanApproval: Automatic
+                  name: cluster-logging
+                  source: redhat-operators
+                  sourceNamespace: openshift-marketplace
+                  startingCSV: cluster-logging.v6.0.1
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: openshift-logging-installed-placement
+  namespace: default
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: cloud
+              operator: In
+              values:
+                - Amazon
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: openshift-logging-installed-placement
+  namespace: default
+placementRef:
+  name: openshift-logging-installed-placement
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+  - name: openshift-logging-installed
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy
